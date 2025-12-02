@@ -1,0 +1,35 @@
+[project]
+name = "study-buddy"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Mariam-Srour2003", email = "mariammsrourr2020@gmail.com@gmail.com" }
+]
+requires-python = ">=3.9"
+dependencies = [
+    "aiohttp>=3.13.2",
+    "faiss-cpu>=1.13.0",
+    "fastapi>=0.123.4",
+    "groq>=0.37.0",
+    "httpx>=0.28.1",
+    "langchain>=0.3.27",
+    "langchain-community>=0.3.31",
+    "langchain-core>=0.3.80",
+    "openai>=2.8.1",
+    "pdfplumber>=0.11.8",
+    "pydantic>=2.12.5",
+    "python-dotenv>=1.2.1",
+    "python-multipart>=0.0.20",
+    "requests>=2.32.5",
+    "sentence-transformers>=5.1.2",
+    "streamlit>=1.50.0",
+    "uvicorn[standard]>=0.38.0",
+]
+
+[project.scripts]
+study-buddy = "study_buddy:main"
+
+[build-system]
+requires = ["uv_build>=0.8.17,<0.9.0"]
+build-backend = "uv_build"
