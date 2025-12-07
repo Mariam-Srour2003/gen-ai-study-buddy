@@ -697,15 +697,19 @@ APP_HTML = r"""<!DOCTYPE html>
       margin-bottom: 40px;
       padding-bottom: 24px;
       border-bottom: 2px solid #ffc1e3;
+      min-height: 120px;
     }
 
     .modal-icon {
       width: 80px;
       height: 80px;
+      min-width: 80px;
+      min-height: 80px;
+      max-width: 80px;
+      max-height: 80px;
       border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: grid;
+      place-items: center;
       font-size: 40px;
       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
       flex-shrink: 0;
