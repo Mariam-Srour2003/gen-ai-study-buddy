@@ -383,6 +383,91 @@ APP_HTML = r"""<!DOCTYPE html>
       margin-top: 4px;
     }
 
+    /* ===== CITATIONS ===== */
+    .citations-container {
+      max-width: 70%;
+      margin-top: 12px;
+      padding: 8px 12px;
+      background: linear-gradient(135deg, rgba(199, 210, 254, 0.15), rgba(125, 211, 252, 0.15));
+      border-left: 4px solid #a78bfa;
+      border-radius: 12px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .citations-container:hover {
+      background: linear-gradient(135deg, rgba(199, 210, 254, 0.25), rgba(125, 211, 252, 0.25));
+    }
+
+    .citations-title {
+      font-weight: 700;
+      color: #6b6674;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      user-select: none;
+    }
+
+    .citations-toggle {
+      margin-left: auto;
+      font-size: 12px;
+      color: #a78bfa;
+      transition: transform 0.2s ease;
+    }
+
+    .citations-container.collapsed .citations-toggle {
+      transform: rotate(-90deg);
+    }
+
+    .citations-content {
+      margin-top: 8px;
+      max-height: 500px;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    .citations-container.collapsed .citations-content {
+      max-height: 0;
+      margin-top: 0;
+    }
+
+    .citation-item {
+      padding: 10px 12px;
+      margin: 8px 0;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 8px;
+      border-left: 3px solid #c7d2fe;
+      color: #4b5563;
+      line-height: 1.5;
+      font-size: 12px;
+    }
+
+    .citation-item strong {
+      display: block;
+      color: #a78bfa;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .citation-score {
+      display: inline-block;
+      background: rgba(167, 139, 250, 0.2);
+      color: #a78bfa;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .citation-text {
+      color: #6b6674;
+      font-size: 12px;
+      line-height: 1.4;
+      margin-top: 4px;
+    }
+
     /* ===== INPUT AREA ===== */
     .input-area {
       background: rgba(255, 255, 255, 0.8);
@@ -425,17 +510,44 @@ APP_HTML = r"""<!DOCTYPE html>
       box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
     }
 
-    .input-wrapper input {
+    .input-wrapper textarea {
       flex: 1;
       border: none;
       outline: none;
       font-family: 'Nunito', sans-serif;
       font-size: 14px;
       background: transparent;
+      resize: none;
+      min-height: 20px;
+      max-height: 120px;
+      overflow-y: auto;
+      line-height: 1.5;
     }
 
-    .input-wrapper input::placeholder {
-      color: #d1d5db;
+    .input-wrapper textarea::placeholder {
+      color: #9ca3af; /* higher contrast for visibility */
+    }
+
+    .mode-toggle {
+      height: 44px;
+      padding: 0 14px;
+      border-radius: 14px;
+      border: 2px solid #a78bfa;
+      background: rgba(167, 139, 250, 0.12);
+      color: #5b21b6;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .mode-toggle:hover {
+      transform: translateY(-1px);
+      background: rgba(167, 139, 250, 0.2);
     }
 
     .send-btn {
@@ -499,6 +611,37 @@ APP_HTML = r"""<!DOCTYPE html>
 
     .provider-selector button:hover {
       transform: scale(1.05);
+    }
+
+    /* ===== FLASHCARD & QUIZ CONTROLS ===== */
+    .flashcard-control,
+    .quiz-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 999px;
+      border: 2px solid #ffc1e3;
+    }
+
+    .flashcard-control label,
+    .quiz-control label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #6b6674;
+    }
+
+    .flashcard-control select,
+    .quiz-control select {
+      background: rgba(255, 193, 227, 0.2);
+      border: none;
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Rubik', sans-serif;
     }
 
     /* ===== MODAL ===== */
@@ -828,8 +971,25 @@ APP_HTML = r"""<!DOCTYPE html>
             </select>
             <button id="applyProvider">Apply</button>
           </div>
-          <button class="mode-btn flashcard-btn" id="flashcardBtn">📚 Flashcards</button>
-          <button class="mode-btn quiz-btn" id="quizBtn">🧠 Quiz</button>
+          <div class="flashcard-control">
+            <label for="flashcardCount">Cards:</label>
+            <select id="flashcardCountSelect">
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="15">15</option>
+            </select>
+            <button class="mode-btn flashcard-btn" id="flashcardBtn">📚 Flashcards</button>
+          </div>
+          <div class="quiz-control">
+            <label for="quizCount">Questions:</label>
+            <select id="quizCountSelect">
+              <option value="3">3</option>
+              <option value="5">5</option>
+              <option value="10">10</option>
+            </select>
+            <button class="mode-btn quiz-btn" id="quizBtn">🧠 Quiz</button>
+          </div>
         </div>
       </div>
 
@@ -844,12 +1004,19 @@ APP_HTML = r"""<!DOCTYPE html>
       </div>
 
       <div class="input-area">
-        <button class="upload-btn" id="uploadBtn" title="Upload PDF">📤</button>
+        <button class="upload-btn" id="uploadBtn" title="Upload PDF">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 19V5" />
+            <path d="M5 12l7-7 7 7" />
+            <path d="M5 19h14" />
+          </svg>
+        </button>
         <input type="file" id="pdfInput" accept=".pdf" style="display: none;" />
         <div class="input-wrapper">
-          <input type="text" id="messageInput" placeholder="Ask me anything about your documents... ✨" />
+          <textarea id="messageInput" placeholder="Ask me anything about your documents... ✨" rows="1"></textarea>
           <span style="color: #ffc1e3;">✨</span>
         </div>
+        <button class="mode-toggle" id="modeToggle" title="Switch response mode">Mode: Normal</button>
         <button class="send-btn" id="sendBtn" title="Send">→</button>
       </div>
     </div>
@@ -887,16 +1054,23 @@ APP_HTML = r"""<!DOCTYPE html>
   </div>
 
   <script>
+    const MODE_OPTIONS = [
+      { id: 'normal', label: 'Normal' },
+      { id: 'explain_simple', label: 'Explain Simply' },
+      { id: 'summarize', label: 'Summarize' },
+    ];
+
     const state = {
       currentChat: null,
       chats: {},
       mascotState: 'happy',
       flashcards: [],
       quizzes: [],
+      currentModeIndex: 0,
     };
 
     // DOM Elements - declare globally
-    let uploadBtn, pdfInput, messageInput, sendBtn, messagesContainer;
+    let uploadBtn, pdfInput, messageInput, sendBtn, modeToggle, messagesContainer;
     let flashcardBtn, quizBtn, flashcardModal, quizModal;
     let closeFlashcard, closeQuiz, docPills, chatTitle;
     let conversationsContainer, providerSelect, applyProvider;
@@ -915,8 +1089,15 @@ APP_HTML = r"""<!DOCTYPE html>
       // Attach event listeners
       uploadBtn.addEventListener('click', () => pdfInput.click());
       pdfInput.addEventListener('change', handleFileUpload);
-      messageInput.addEventListener('keypress', (e) => e.key === 'Enter' && sendMessage());
+      messageInput.addEventListener('input', autoResizeTextarea);
+      messageInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
       sendBtn.addEventListener('click', sendMessage);
+      modeToggle.addEventListener('click', cycleMode);
       flashcardBtn.addEventListener('click', () => generateFlashcards());
       quizBtn.addEventListener('click', () => generateQuiz());
       closeFlashcard.addEventListener('click', () => flashcardModal.classList.remove('active'));
@@ -926,6 +1107,9 @@ APP_HTML = r"""<!DOCTYPE html>
         createNewChat();
         messageInput.focus();
       });
+
+      // initial mode label
+      updateModeButton();
     });
 
     // Create initial chat session
@@ -957,6 +1141,7 @@ APP_HTML = r"""<!DOCTYPE html>
       pdfInput = document.getElementById('pdfInput');
       messageInput = document.getElementById('messageInput');
       sendBtn = document.getElementById('sendBtn');
+      modeToggle = document.getElementById('modeToggle');
       messagesContainer = document.getElementById('messages');
       flashcardBtn = document.getElementById('flashcardBtn');
       quizBtn = document.getElementById('quizBtn');
@@ -996,22 +1181,55 @@ APP_HTML = r"""<!DOCTYPE html>
       pdfInput.value = '';
     }
 
+    function autoResizeTextarea() {
+      messageInput.style.height = 'auto';
+      messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
+    }
+
+    function updateModeButton() {
+      const mode = MODE_OPTIONS[state.currentModeIndex];
+      if (modeToggle) {
+        modeToggle.textContent = `Mode: ${mode.label}`;
+      }
+    }
+
+    function cycleMode() {
+      state.currentModeIndex = (state.currentModeIndex + 1) % MODE_OPTIONS.length;
+      updateModeButton();
+    }
+
     async function sendMessage() {
       const text = messageInput.value.trim();
       if (!text) return;
 
+      const mode = MODE_OPTIONS[state.currentModeIndex];
+      const chat = state.chats[state.currentChat];
+
+      if (mode.id === 'summarize' && !chat.docId) {
+        addBotMessage('Please upload a document first to summarize! 📄', 'error');
+        return;
+      }
+
       addUserMessage(text);
       messageInput.value = '';
+      messageInput.style.height = 'auto';
       setMascot('thinking');
 
       try {
-        const chat = state.chats[state.currentChat];
+        let inputText = text;
+        let modeToSend = 'explain';
+        if (mode.id === 'summarize') {
+          modeToSend = 'summarize';
+        } else if (mode.id === 'explain_simple') {
+          inputText = `${text} (Explain simply)`;
+        }
+
         const res = await fetch('/agent', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            mode: 'explain',
-            input: text,
+            mode: modeToSend,
+            input: inputText,
             doc_id: chat.docId || null,
           }),
         });
@@ -1020,19 +1238,25 @@ APP_HTML = r"""<!DOCTYPE html>
         if (!res.ok) throw new Error(data.detail);
 
         if (data.message) {
-          addBotMessage(data.message);
+          addBotMessage(data.message, 'normal', data.sources || []);
         }
       } catch (err) {
-        addBotMessage(`Error: ${err.message}`, 'error');
+        addBotMessage(`Error: ${err.message}`, 'error', []);
       } finally {
         setMascot('happy');
       }
     }
 
     async function generateFlashcards() {
+      const chat = state.chats[state.currentChat];
+      if (!chat.docId) {
+        addBotMessage('Please upload a document first to generate flashcards! 📄', 'error');
+        return;
+      }
+
       setMascot('thinking');
       try {
-        const chat = state.chats[state.currentChat];
+        const numFlashcards = parseInt(document.getElementById('flashcardCountSelect').value) || 4;
         const res = await fetch('/agent', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1040,7 +1264,7 @@ APP_HTML = r"""<!DOCTYPE html>
             mode: 'flashcards',
             input: 'Generate flashcards',
             doc_id: chat.docId,
-            num_questions: 4,
+            num_questions: numFlashcards,
           }),
         });
 
@@ -1067,6 +1291,7 @@ APP_HTML = r"""<!DOCTYPE html>
 
       setMascot('thinking');
       try {
+        const numQuestions = parseInt(document.getElementById('quizCountSelect').value) || 3;
         const res = await fetch('/agent', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1074,7 +1299,7 @@ APP_HTML = r"""<!DOCTYPE html>
             mode: 'mcq',
             input: 'Generate quiz questions',
             doc_id: chat.docId,
-            num_questions: 3,
+            num_questions: numQuestions,
             include_explanations: true,
           }),
         });
@@ -1231,10 +1456,10 @@ APP_HTML = r"""<!DOCTYPE html>
       renderConversations();
     }
 
-    function addBotMessage(text, type = 'normal') {
+    function addBotMessage(text, type = 'normal', citations = []) {
       const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const chat = state.chats[state.currentChat];
-      chat.messages.push({ sender: 'bot', text, time, type });
+      chat.messages.push({ sender: 'bot', text, time, type, citations });
       renderMessages();
     }
 
@@ -1242,7 +1467,39 @@ APP_HTML = r"""<!DOCTYPE html>
       const chat = state.chats[state.currentChat];
       messagesContainer.innerHTML = chat.messages
         .map(
-          (msg) => `
+          (msg) => {
+            const citationsHtml = msg.citations && msg.citations.length > 0 
+              ? `
+                <div class="citations-container collapsed" onclick="toggleCitations(event)">
+                  <div class="citations-title">
+                    <span>📚 Sources (${msg.citations.length})</span>
+                    <span class="citations-toggle">▼</span>
+                  </div>
+                  <div class="citations-content">
+                    ${msg.citations.map((c, idx) => {
+                      // Handle both object citations and string citations
+                      if (typeof c === 'string') {
+                        return `<div class="citation-item">${escapeHtml(c)}</div>`;
+                      } else if (typeof c === 'object' && c !== null) {
+                        const chunkId = c.chunk_id || `chunk_${idx}`;
+                        const score = c.score ? (typeof c.score === 'number' ? c.score.toFixed(3) : c.score) : 'N/A';
+                        const text = c.text ? escapeHtml(c.text) : 'No text available';
+                        return `
+                          <div class="citation-item">
+                            <strong>${escapeHtml(chunkId)}</strong>
+                            <div class="citation-score">Relevance: ${score}</div>
+                            <div class="citation-text">${text}</div>
+                          </div>
+                        `;
+                      }
+                      return '';
+                    }).join('')}
+                  </div>
+                </div>
+              `
+              : '';
+            
+            return `
         <div class="message ${msg.sender}">
           ${
             msg.sender === 'bot'
@@ -1255,10 +1512,12 @@ APP_HTML = r"""<!DOCTYPE html>
           }
           <div>
             <div class="bubble" style="${msg.type === 'error' ? 'background: #fee2e2; border-color: #f87171; color: #7f1d1d;' : ''}">${escapeHtml(msg.text)}</div>
+            ${citationsHtml}
             <div class="message-time">${msg.time}</div>
           </div>
         </div>
-      `
+      `;
+          }
         )
         .join('');
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -1268,6 +1527,15 @@ APP_HTML = r"""<!DOCTYPE html>
       state.mascotState = newState;
       renderMessages();
     }
+
+    function toggleCitations(event) {
+      const container = event.currentTarget;
+      container.classList.toggle('collapsed');
+      event.stopPropagation();
+    }
+
+    // Expose globally
+    window.toggleCitations = toggleCitations;
 
     function escapeHtml(text) {
       const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
