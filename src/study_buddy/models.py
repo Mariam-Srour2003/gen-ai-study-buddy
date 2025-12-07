@@ -78,6 +78,14 @@ class QueryResponse(BaseModel):
     doc_id: str
 
 
+# ============== Citation Models ==============
+
+class Citation(BaseModel):
+    """A citation with chunk metadata and relevance score"""
+    chunk_id: str = Field(..., description="Unique identifier for the chunk")
+    score: float = Field(..., description="Relevance score (0-1)")
+    text: str = Field(..., description="Preview text from the chunk")
+
 # ============== Agent Models ==============
 
 class AgentRequest(BaseModel):
@@ -103,7 +111,7 @@ class AgentResponse(BaseModel):
     flashcards: Optional[List[Flashcard]] = Field(default=None, description="Flashcards for flashcards mode")
     
     # Metadata
-    sources: List[str] = Field(default_factory=list, description="Source citations from RAG")
+    sources: List[Citation] = Field(default_factory=list, description="Source citations from RAG with metadata")
     doc_ids_used: List[str] = Field(default_factory=list, description="Document IDs used in response")
     tools_used: List[str] = Field(default_factory=list, description="Tools invoked (for auto-study mode)")
     warning: Optional[str] = Field(default=None, description="Any warnings")
