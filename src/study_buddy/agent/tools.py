@@ -68,7 +68,8 @@ class BaseStudyTool(BaseTool):
         try:
             result = self.pipeline.query(doc_id, query, k=k)
             context = result.get("answer", "").replace("Based on retrieved context:\n\n", "")
-            citations = [c.get("text", "") for c in result.get("citations", [])]
+            # Keep full citation metadata (chunk_id, score, text) instead of just text
+            citations = result.get("citations", [])
             return context, citations
         except Exception as e:
             logger.warning(f"RAG retrieval failed: {e}")
@@ -185,6 +186,12 @@ IMPORTANT: Return ONLY valid JSON, no markdown or extra text."""
             result = json.loads(content)
             questions = result.get("questions", [])
             
+            # Limit to exactly num_questions
+            generated_count = len(questions)
+            if generated_count > num_questions:
+                logger.warning(f"LLM generated {generated_count} questions but limiting to {num_questions} as requested")
+                questions = questions[:num_questions]
+            
             # Build response
             mcq_questions = []
             for q in questions:
@@ -296,8 +303,13 @@ IMPORTANT: Return ONLY valid JSON, no markdown or extra text."""
                     answer=fc.get("answer", ""),
                     mnemonic=fc.get("mnemonic", "")
                 )
-                for fc in result.get("flashcards", [])
+                for fc in result.get("flashcards", [])[:num_cards]  # Limit to exactly num_cards
             ]
+            
+            # Log if LLM generated more than requested
+            generated_count = len(result.get("flashcards", []))
+            if generated_count > num_cards:
+                logger.warning(f"LLM generated {generated_count} flashcards but limiting to {num_cards} as requested")
             
             return {
                 "flashcards": [fc.model_dump() for fc in flashcards],
@@ -344,24 +356,22 @@ class ExplainTool(BaseStudyTool):
         context_instruction = ""
         if context:
             context_instruction = f"""
-Use the following content as your primary source:
+
+Here's what I found in the document:
 {context}
-
-Base your explanation on this content, but make it clearer and more accessible."""
+"""
         
-        prompt = f"""You are a friendly, expert educator explaining concepts to non-expert adults.
-
-Explain this concept: {concept}
+        prompt = f"""You're chatting with someone who asked: "{concept}"
 {context_instruction}
 
-Your explanation should:
-1. Be clear and easy to understand (no jargon, or explain jargon when necessary)
-2. Use simple analogies and real-world examples
-3. Break down complex ideas into digestible parts
-4. Be conversational and engaging
-5. Be thorough but not overwhelming
+Respond naturally like you're having a friendly conversation. Keep it:
+- Direct and to the point - answer what they asked
+- Conversational, like talking to a friend
+- Simple and clear (skip jargon unless needed)
+- Short - no walls of text
+- Pure text only - NO markdown, NO bullet points, NO formatting, NO asterisks, NO headers
 
-Provide a clear, helpful explanation:"""
+Just answer their question in a friendly, helpful way:"""
 
         try:
             response = self.llm.invoke(prompt)
@@ -422,23 +432,21 @@ class SummarizeTool(BaseStudyTool):
                 "warning": "Document may be empty or not ingested"
             }
         
-        topic_focus = f"\n\nFocus especially on: {topic}" if topic else ""
+        topic_focus = f" They want to know about: {topic}." if topic else ""
         
-        prompt = f"""You are an expert at creating clear, useful summaries for adult learners.
+        prompt = f"""Someone asked you to summarize this document.{topic_focus}
 
-Summarize the following content in a clear, organized way:
-
+Content:
 {context}
-{topic_focus}
 
-Your summary should:
-1. Capture the main ideas and key points
-2. Be well-organized (use bullet points or sections if helpful)
-3. Be concise but complete
-4. Highlight the most important takeaways
-5. Be easy to understand for non-experts
+Give them a friendly, conversational summary that:
+- Captures the main points naturally
+- Sounds like you're explaining it to a friend
+- Is organized but flows naturally (like paragraphs, NOT bullet points)
+- Stays focused on what matters
+- Pure text only - NO markdown, NO bullets, NO formatting, NO asterisks, NO headers
 
-Provide a helpful summary:"""
+Just tell them what the document is about in a clear, natural way:"""
 
         try:
             response = self.llm.invoke(prompt)
