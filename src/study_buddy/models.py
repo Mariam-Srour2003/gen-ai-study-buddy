@@ -23,13 +23,10 @@ class QuizRequest(BaseModel):
 class QuizResponse(BaseModel):
     quiz_questions: List[QuizQuestion]
 
-class IngestTextRequest(BaseModel):
-    doc_id: str
-    text: str
-
 class IngestResponse(BaseModel):
     status: str
     doc_id: str
+    num_chunks: Optional[int] = None
 
 class QueryRequest(BaseModel):
     doc_id: str
@@ -39,3 +36,4 @@ class QueryRequest(BaseModel):
 class QueryResponse(BaseModel):
     answer: str
     citations: List[str]
+    doc_id: str
