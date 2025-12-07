@@ -4,8 +4,12 @@ from contextlib import asynccontextmanager
 import logging
 import sys
 
-from fastapi import FastAPI
+from typing import Literal
+
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+from pydantic import BaseModel
 
 from .api.routers import rag_router, health_router
 from .api.agent_router import agent_router
@@ -13,6 +17,7 @@ from .config.settings import get_settings
 from .rag_qa.qa import RAGPipeline
 from .agent.study_agent import StudyAgent
 from .utils.health_check import check_ollama_connection
+from .ui.app_ui import APP_HTML, ui_router
 
 
 def setup_logging() -> None:
@@ -46,22 +51,14 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """
-    Application lifespan manager.
-    
-    Creates the RAG pipeline and Study Agent ONCE at startup - no race conditions
-    possible since this runs before any requests are accepted.
-    """
-    logger.info("Starting Study Buddy API...")
-    
-    # Create pipeline at startup (single-threaded, no race condition)
-    settings = get_settings()
-    
-    logger.info(f"LLM Provider: {settings.llm_provider}, Model: {settings.llm_model}")
-    logger.info(f"Embedding Provider: {settings.embedding_provider}, Model: {settings.embedding_model_name}")
-    
+class ProviderSwitch(BaseModel):
+    """Request model for provider switching"""
+    llm_provider: Literal["google", "ollama"]
+    embedding_provider: Literal["google", "ollama"]
+
+
+async def build_components(app: FastAPI, settings):
+    """Build or rebuild RAG pipeline and Study Agent with current settings."""
     # Validate Ollama connectivity if using Ollama provider
     if settings.embedding_provider == "ollama" or settings.llm_provider == "ollama":
         logger.info(f"Checking Ollama connection at {settings.ollama_base_url}...")
@@ -72,6 +69,7 @@ async def lifespan(app: FastAPI):
             raise RuntimeError(error_msg)
         logger.info("✓ Ollama connection verified")
     
+    # Create RAG Pipeline
     app.state.pipeline = RAGPipeline(
         chunk_size=settings.chunk_size,
         chunk_overlap=settings.chunk_overlap,
@@ -99,6 +97,26 @@ async def lifespan(app: FastAPI):
     )
     
     logger.info("Study Agent initialized successfully")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Application lifespan manager.
+    
+    Creates the RAG pipeline and Study Agent ONCE at startup - no race conditions
+    possible since this runs before any requests are accepted.
+    """
+    logger.info("Starting Study Buddy API...")
+    
+    # Create pipeline at startup (single-threaded, no race condition)
+    settings = get_settings()
+    
+    logger.info(f"LLM Provider: {settings.llm_provider}, Model: {settings.llm_model}")
+    logger.info(f"Embedding Provider: {settings.embedding_provider}, Model: {settings.embedding_model_name}")
+    
+    # Build components with current settings
+    await build_components(app, settings)
     
     yield  # App runs and handles requests here
     
@@ -135,25 +153,13 @@ app.add_middleware(
 app.include_router(health_router)
 app.include_router(rag_router)
 app.include_router(agent_router)
+app.include_router(ui_router)
 
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 async def root():
-    """Root endpoint with API info"""
-    settings = get_settings()
-    return {
-        "name": "Study Buddy API",
-        "version": "0.1.0",
-        "docs": "/docs",
-        "health": "/health",
-        "agent": "/agent",
-        "providers": {
-            "llm": settings.llm_provider,
-            "llm_model": settings.llm_model,
-            "embedding": settings.embedding_provider,
-            "embedding_model": settings.embedding_model_name,
-        },
-    }
+    """Root endpoint serving the Study Buddy UI"""
+    return HTMLResponse(content=APP_HTML)
 
 
 @app.get("/providers")
@@ -161,3 +167,35 @@ async def get_providers():
     """Get current provider configuration"""
     settings = get_settings()
     return settings.get_provider_info()
+
+
+@app.post("/providers/switch")
+async def switch_providers(payload: ProviderSwitch):
+    """Switch LLM and embedding providers at runtime."""
+    settings = get_settings()
+    
+    # Validate Google API key if switching to Google
+    if (payload.llm_provider == "google" or payload.embedding_provider == "google"):
+        if not settings.google_api_key:
+            raise HTTPException(
+                status_code=400,
+                detail="GOOGLE_API_KEY is required to use Google provider. Set it in your .env file."
+            )
+    
+    # Update settings
+    settings.llm_provider = payload.llm_provider
+    settings.embedding_provider = payload.embedding_provider
+    
+    logger.info(f"Switching providers - LLM: {payload.llm_provider}, Embedding: {payload.embedding_provider}")
+    
+    try:
+        # Rebuild components with new providers
+        await build_components(app, settings)
+        logger.info("✓ Provider switch completed successfully")
+        return settings.get_provider_info()
+    except Exception as e:
+        logger.error(f"Provider switch failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to switch providers: {str(e)}"
+        )
