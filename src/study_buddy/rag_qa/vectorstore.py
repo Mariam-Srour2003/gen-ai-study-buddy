@@ -1,17 +1,53 @@
-"""Vector store wrapper - uses LangChain's FAISS integration with Google embeddings"""
+"""Vector store wrapper - uses LangChain's FAISS integration with Google/Ollama embeddings"""
 
 from pathlib import Path
-from typing import List, Any, Tuple
+from typing import List, Any, Tuple, Literal
 from collections import OrderedDict
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
+from langchain_core.embeddings import Embeddings
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_ollama import OllamaEmbeddings
 import logging
 
 logger = logging.getLogger(__name__)
 
 # Maximum number of FAISS indices to keep in memory
 MAX_CACHED_INDICES = 20
+
+
+def create_embeddings(
+    provider: Literal["google", "ollama"],
+    google_api_key: str = None,
+    google_model: str = "gemini-embedding-001",
+    ollama_base_url: str = "http://localhost:11434",
+    ollama_model: str = "nomic-embed-text:latest"
+) -> Embeddings:
+    """
+    Factory function to create embeddings based on provider.
+    
+    Args:
+        provider: Either "google" or "ollama"
+        google_api_key: Google API key (required for Google provider)
+        google_model: Google embedding model name
+        ollama_base_url: Ollama server URL
+        ollama_model: Ollama embedding model name
+    
+    Returns:
+        LangChain Embeddings instance
+    """
+    if provider == "ollama":
+        logger.info(f"Using Ollama embeddings: {ollama_model} at {ollama_base_url}")
+        return OllamaEmbeddings(
+            model=ollama_model,
+            base_url=ollama_base_url
+        )
+    else:
+        logger.info(f"Using Google embeddings: {google_model}")
+        return GoogleGenerativeAIEmbeddings(
+            model=f"models/{google_model}",
+            google_api_key=google_api_key
+        )
 
 
 class LRUCache:
@@ -55,7 +91,11 @@ class FAISSVectorStore:
     def __init__(
         self,
         index_path: str | Path,
+        embedding_provider: Literal["google", "ollama"] = "google",
         google_api_key: str = None,
+        google_embedding_model: str = "gemini-embedding-001",
+        ollama_base_url: str = "http://localhost:11434",
+        ollama_embedding_model: str = "nomic-embed-text:latest",
         max_cached_indices: int = MAX_CACHED_INDICES
     ):
         """
@@ -63,22 +103,30 @@ class FAISSVectorStore:
         
         Args:
             index_path: Directory to store indices
-            google_api_key: Google API key
+            embedding_provider: Either "google" or "ollama"
+            google_api_key: Google API key (required for Google provider)
+            google_embedding_model: Google embedding model name
+            ollama_base_url: Ollama server URL
+            ollama_embedding_model: Ollama embedding model name
             max_cached_indices: Maximum number of indices to keep in memory
         """
         self.index_path = Path(index_path)
         self.index_path.mkdir(parents=True, exist_ok=True)
         
-        # LangChain's Google embeddings
-        self.embeddings = GoogleGenerativeAIEmbeddings(
-            model="models/gemini-embedding-001",
-            google_api_key=google_api_key
+        # Create embeddings based on provider
+        self.embedding_provider = embedding_provider
+        self.embeddings = create_embeddings(
+            provider=embedding_provider,
+            google_api_key=google_api_key,
+            google_model=google_embedding_model,
+            ollama_base_url=ollama_base_url,
+            ollama_model=ollama_embedding_model
         )
         
         # LRU cache for vectorstores (prevents unbounded memory growth)
         self.vectorstores = LRUCache(max_size=max_cached_indices)
         
-        logger.info(f"FAISS VectorStore initialized at {self.index_path} (max cache: {max_cached_indices})")
+        logger.info(f"FAISS VectorStore initialized at {self.index_path} (provider: {embedding_provider}, max cache: {max_cached_indices})")
     
     def create_index(
         self,

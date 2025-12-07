@@ -1,6 +1,6 @@
 """Minimal RAG pipeline leveraging LangChain for all heavy lifting"""
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Literal
 from pathlib import Path
 import logging
 
@@ -19,7 +19,11 @@ class RAGPipeline:
         self,
         chunk_size: int = 512,
         chunk_overlap: int = 50,
+        embedding_provider: Literal["google", "ollama"] = "google",
         google_api_key: str = None,
+        google_embedding_model: str = "gemini-embedding-001",
+        ollama_base_url: str = "http://localhost:11434",
+        ollama_embedding_model: str = "nomic-embed-text:latest",
         faiss_index_path: str | Path = None,
         metadata_path: str | Path = None,
         top_k_results: int = 3
@@ -30,23 +34,30 @@ class RAGPipeline:
         Args:
             chunk_size: Size of text chunks
             chunk_overlap: Overlap between chunks
-            google_api_key: Google API key for embeddings
+            embedding_provider: Either "google" or "ollama"
+            google_api_key: Google API key for embeddings (required for Google provider)
+            google_embedding_model: Google embedding model name
+            ollama_base_url: Ollama server URL
+            ollama_embedding_model: Ollama embedding model name
             faiss_index_path: Path to store FAISS indices
             metadata_path: Path to store metadata
             top_k_results: Number of results to return in queries
         """
-        logger.info("Initializing RAG Pipeline")
+        logger.info(f"Initializing RAG Pipeline with {embedding_provider} embeddings")
         
         # Store config
         self.top_k_results = top_k_results
+        self.embedding_provider = embedding_provider
         
         # Validate required paths
         if faiss_index_path is None:
             raise ValueError("faiss_index_path is required")
         if metadata_path is None:
             raise ValueError("metadata_path is required")
-        if google_api_key is None:
-            raise ValueError("google_api_key is required")
+        
+        # Validate Google API key if using Google provider
+        if embedding_provider == "google" and not google_api_key:
+            raise ValueError("google_api_key is required when using Google embedding provider")
         
         self.pdf_loader = PDFLoader()
         self.chunker = DocumentChunker(
@@ -55,11 +66,15 @@ class RAGPipeline:
         )
         self.vectorstore = FAISSVectorStore(
             index_path=faiss_index_path,
-            google_api_key=google_api_key
+            embedding_provider=embedding_provider,
+            google_api_key=google_api_key,
+            google_embedding_model=google_embedding_model,
+            ollama_base_url=ollama_base_url,
+            ollama_embedding_model=ollama_embedding_model,
         )
         self.metadata_store = MetadataStore(storage_path=metadata_path)
         
-        logger.info("RAG Pipeline ready")
+        logger.info(f"RAG Pipeline ready (provider: {embedding_provider})")
     
     def ingest_pdf(self, pdf_path: str | Path, doc_id: str, force_recreate: bool = False) -> Dict[str, Any]:
         """Ingest PDF document"""
