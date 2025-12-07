@@ -4,23 +4,26 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 authors = [
-    { name = "Mariam-Srour2003", email = "mariammsrourr2020@gmail.com@gmail.com" }
+    { name = "Mariam-Srour2003", email = "mariammsrourr2020@gmail.com" },
+    { name = "hibarezek", email="hibam.2003rezek@gmail.com"}
 ]
 requires-python = ">=3.12"
 dependencies = [
     "aiohttp>=3.13.2",
     "faiss-cpu>=1.13.0",
     "fastapi>=0.123.4",
+    "google-generativeai>=0.7.0",
     "httpx>=0.28.1",
     "langchain>=0.3.27",
     "langchain-community>=0.3.31",
     "langchain-core>=0.3.80",
+    "langchain-google-genai>=1.0.0",
     "pdfplumber>=0.11.8",
     "pydantic>=2.12.5",
+    "pydantic-settings>=2.0.0",
     "python-dotenv>=1.2.1",
     "python-multipart>=0.0.20",
     "requests>=2.32.5",
-    "sentence-transformers>=5.1.2",
     "streamlit>=1.50.0",
     "uvicorn[standard]>=0.38.0",
 ]
